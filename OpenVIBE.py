@@ -5,13 +5,10 @@ import tempfile
 import tensorflow as tf
 from tensorflow import keras
 import os
-from pydub import AudioSegment
-
 import requests
-
-
-AudioSegment.converter = r"C:\Users\USER\AppData\Local\Microsoft\WinGet\Packages\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\ffmpeg-8.0.1-full_build\bin\ffmpeg.exe"
-AudioSegment.ffprobe = r"C:\Users\USER\AppData\Local\Microsoft\WinGet\Packages\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\ffmpeg-8.0.1-full_build\bin\ffprobe.exe"
+import ffmpeg
+import io
+import soundfile as sf
 
 
 os.environ["TF_ENABLE_ONEDNN_OPTS"] = "3"
@@ -58,7 +55,20 @@ def preprocess(wav_tensor):
     spectrogram = tf.expand_dims(spectrogram, axis=2)
     return spectrogram
 
-# --------------------- USER INPUT ----------------------
+
+def load_audio(file_path, target_sr=16000):
+    """
+    Convert any supported audio file (aac, mp3, wav) to a numpy array in memory.
+    """
+    out, _ = (
+        ffmpeg.input(file_path)
+        .output('pipe:', format='wav', acodec='pcm_s16le', ac=1, ar=target_sr)
+        .run(capture_stdout=True, capture_stderr=True)
+    )
+    audio_np, sr = sf.read(io.BytesIO(out))
+    return audio_np, sr
+
+
 name = st.text_input(label="What's your name")
 if name.strip() == "":
     name = "User"
@@ -74,14 +84,10 @@ if uploaded_file is not None:
     with tempfile.NamedTemporaryFile(delete=False, suffix=f".{uploaded_file.name.split('.')[-1]}") as temp_input:
         temp_input.write(uploaded_file.read())
         temp_input_path = temp_input.name
-    temp_wav_path = temp_input_path + ".wav"
 
     try:
-        # Use AudioSegment with explicit FFmpeg paths
-        audio = AudioSegment.from_file(temp_input_path)
-        audio.export(temp_wav_path, format="wav")
-
-        y_np, sr = lib.load(temp_wav_path, sr=16000, mono=True)
+        # Load audio in memory
+        y_np, sr = load_audio(temp_input_path, target_sr=16000)
         wav_tensor = tf.convert_to_tensor(y_np, dtype=tf.float32)
         spectrogram_3d = preprocess(wav_tensor)
 
@@ -99,8 +105,6 @@ if uploaded_file is not None:
     finally:
         if os.path.exists(temp_input_path):
             os.unlink(temp_input_path)
-        if os.path.exists(temp_wav_path):
-            os.unlink(temp_wav_path)
 
     st.markdown(":red[_______________________________________________________________________________________]")
     with st.expander(label="Secret Message"):
