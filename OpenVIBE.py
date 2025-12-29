@@ -6,12 +6,16 @@ import tensorflow as tf
 from tensorflow import keras
 import os
 from pydub import AudioSegment
+
 import requests
+
+
+AudioSegment.converter = r"C:\Users\USER\AppData\Local\Microsoft\WinGet\Packages\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\ffmpeg-8.0.1-full_build\bin\ffmpeg.exe"
+AudioSegment.ffprobe = r"C:\Users\USER\AppData\Local\Microsoft\WinGet\Packages\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\ffmpeg-8.0.1-full_build\bin\ffprobe.exe"
 
 
 os.environ["TF_ENABLE_ONEDNN_OPTS"] = "3"
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-
 
 MODEL_URL = "https://github.com/Sageioi/Eureka/releases/download/v1.0.0/AudioModel.keras"
 MODEL_PATH = "AudioModel.keras"
@@ -24,10 +28,8 @@ st.text(
     "This product is an initiative of Eureka AI laboratory for AI for therapy."
 )
 
-
 @st.cache_resource
 def load_model():
-
     if not os.path.exists(MODEL_PATH):
         r = requests.get(MODEL_URL, allow_redirects=True)
         with open(MODEL_PATH, "wb") as f:
@@ -35,7 +37,6 @@ def load_model():
     return keras.models.load_model(MODEL_PATH)
 
 model = load_model()
-
 
 def preprocess(wav_tensor):
     if not isinstance(wav_tensor, tf.Tensor):
@@ -69,7 +70,6 @@ uploaded_file = st.file_uploader(
     help="Supported formats: WAV, MP3, AAC."
 )
 
-
 if uploaded_file is not None:
     with tempfile.NamedTemporaryFile(delete=False, suffix=f".{uploaded_file.name.split('.')[-1]}") as temp_input:
         temp_input.write(uploaded_file.read())
@@ -77,17 +77,15 @@ if uploaded_file is not None:
     temp_wav_path = temp_input_path + ".wav"
 
     try:
-    
+        # Use AudioSegment with explicit FFmpeg paths
         audio = AudioSegment.from_file(temp_input_path)
         audio.export(temp_wav_path, format="wav")
-
 
         y_np, sr = lib.load(temp_wav_path, sr=16000, mono=True)
         wav_tensor = tf.convert_to_tensor(y_np, dtype=tf.float32)
         spectrogram_3d = preprocess(wav_tensor)
 
         if spectrogram_3d is not None:
-          
             spectrogram_4d = tf.expand_dims(spectrogram_3d, axis=0)
             predictions = model.predict(spectrogram_4d)
             y_pred_index = np.argmax(predictions)
@@ -103,7 +101,6 @@ if uploaded_file is not None:
             os.unlink(temp_input_path)
         if os.path.exists(temp_wav_path):
             os.unlink(temp_wav_path)
-
 
     st.markdown(":red[_______________________________________________________________________________________]")
     with st.expander(label="Secret Message"):
