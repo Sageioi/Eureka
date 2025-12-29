@@ -6,7 +6,7 @@ import tensorflow as tf
 from tensorflow import keras
 import os
 import requests
-import ffmpeg
+import ffmpeg-python as ffmpeg
 import io
 import soundfile as sf
 
@@ -120,3 +120,4 @@ if uploaded_file is not None:
             st.text(f"Message for {name}: {messages[y_pred_index][number]}")
         else:
             st.text("No message available. Please upload a clear audio file.")
+
