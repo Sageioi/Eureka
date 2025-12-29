@@ -5,3 +5,4 @@ librosa
 tensorflow
 pydub
 requests
+ffmpeg
