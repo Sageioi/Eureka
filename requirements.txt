@@ -4,3 +4,4 @@ numpy
 librosa
 tensorflow
 pydub
+requests
